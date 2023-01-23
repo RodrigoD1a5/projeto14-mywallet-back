@@ -107,6 +107,20 @@ server.post('/records', async (req, res) => {
 
 });
 
+server.get('/records', async (req, res) => {
+    const { authorization } = req.headers;
+    const token = authorization?.replace("Bearer ", "");
+    if (!token) return res.status(401).send("Não autorizado");
+
+    try {
+        const records = await db.collection("/records").find({ token }).toArray();
+        res.status(200).send(records);
+    } catch (error) {
+        res.send(error.message);
+    }
+
+
+});
 server.listen(PORT, () => {
     console.log(`Servidor funcionando na porta ${PORT}`);
 });
