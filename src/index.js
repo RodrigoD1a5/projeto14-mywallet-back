@@ -30,7 +30,7 @@ try {
 db = mongoClient.db();
 
 server.post('/sign-up', async (req, res) => {
-    const { nome, email, password } = req.body;
+    const { nome, email, password, passwordConfirmation } = req.body;
 
     const { error } = postUsersSchemas.validate({ nome, email, password });
 
@@ -39,12 +39,14 @@ server.post('/sign-up', async (req, res) => {
     const passwordHashed = bcrypt.hashSync(password, 10);
     try {
         const checkSignUp = !!await db.collection('users').findOne({ email });
-        if (checkSignUp) return res.sendStatus(409);
+        console.log(checkSignUp);
+
+        if (checkSignUp) return res.status(409).send("Não autorizado");
 
         const token = uuidv4();
 
         await db.collection("users").insertOne({ nome, email, password: passwordHashed, token });
-        res.status(201).send("Usuario cadastrado");
+        res.status(201).send("Usuario cadastrado com sucesso!");
     }
     catch (error) {
         res.send(error.message);
@@ -88,7 +90,7 @@ server.post('/records', async (req, res) => {
     if (!token) return res.status(422).send("Informe o token");
 
     try {
-        const checkAuthorization = await db.collection("sessions").findOne({ token });
+        const checkAuthorization = !! await db.collection("sessions").findOne({ token });
         if (!checkAuthorization) return res.status(401).send("Não autorizado");
         await db.collection("records").insertOne({
             idUser: checkAuthorization.idUser,
@@ -113,7 +115,9 @@ server.get('/records', async (req, res) => {
     if (!token) return res.status(401).send("Não autorizado");
 
     try {
-        const records = await db.collection("/records").find({ token }).toArray();
+        const { idUser } = await db.collection("sessions").findOne({ token });
+
+        const records = await db.collection("records").find({ idUser }).toArray();
         res.status(200).send(records);
     } catch (error) {
         res.send(error.message);
@@ -121,6 +125,7 @@ server.get('/records', async (req, res) => {
 
 
 });
+
 server.listen(PORT, () => {
     console.log(`Servidor funcionando na porta ${PORT}`);
 });
